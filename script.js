@@ -2,6 +2,7 @@
 const fileInput = document.getElementById('fileInput');
 const gridContainer = document.getElementById('gridContainer');
 const downloadBtn = document.getElementById('downloadBtn');
+const toggleDarkModeBtn = document.getElementById('toggleDarkMode');
 
 let images = [];
 
@@ -9,7 +10,6 @@ fileInput.addEventListener('change', handleFiles);
 
 function handleFiles() {
   const files = Array.from(fileInput.files);
-  
   const remainingSlots = 50 - images.length;
   if (remainingSlots <= 0) {
     alert('Maximum de 50 logos atteint.');
@@ -17,22 +17,44 @@ function handleFiles() {
   }
   const validFiles = files.slice(0, remainingSlots);
 
-
   validFiles.forEach(file => {
     const reader = new FileReader();
     reader.onload = function (e) {
-      const img = document.createElement('img');
-      img.src = e.target.result;
-      img.className = 'grid-item';
-      img.draggable = true;
+      const originalImg = new Image();
+      originalImg.onload = function () {
+        const size = 300;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
 
-      img.addEventListener('dragstart', handleDragStart);
-      img.addEventListener('dragover', e => e.preventDefault());
-      img.addEventListener('drop', handleDrop);
+        // fond blanc
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, size, size);
 
-      gridContainer.appendChild(img);
-      images.push(img);
-      updateGridLayout();
+        // redimensionnement proportionnel
+        const ratio = Math.min(size * 0.8 / originalImg.width, size * 0.8 / originalImg.height);
+        const newWidth = originalImg.width * ratio;
+        const newHeight = originalImg.height * ratio;
+        const xOffset = (size - newWidth) / 2;
+        const yOffset = (size - newHeight) / 2;
+
+        ctx.drawImage(originalImg, xOffset, yOffset, newWidth, newHeight);
+
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL();
+        img.className = 'grid-item';
+        img.draggable = true;
+
+        img.addEventListener('dragstart', handleDragStart);
+        img.addEventListener('dragover', e => e.preventDefault());
+        img.addEventListener('drop', handleDrop);
+
+        gridContainer.appendChild(img);
+        images.push(img);
+        updateGridLayout();
+      };
+      originalImg.src = e.target.result;
     };
     reader.readAsDataURL(file);
   });
@@ -46,7 +68,6 @@ function handleDrop(e) {
   e.preventDefault();
   const draggedIndex = e.dataTransfer.getData('text/plain');
   const targetIndex = images.indexOf(e.target);
-
   if (draggedIndex === targetIndex) return;
 
   const draggedImage = images[draggedIndex];
@@ -79,6 +100,6 @@ downloadBtn.addEventListener('click', () => {
   });
 });
 
-document.getElementById('toggleDarkMode').addEventListener('click', () => {
+toggleDarkModeBtn.addEventListener('click', () => {
   document.body.classList.toggle('dark-mode');
 });
